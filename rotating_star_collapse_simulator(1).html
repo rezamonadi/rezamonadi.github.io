@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rotating Star Collapse Simulator</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141a33;
+      --text: #e6e9ff;
+      --muted: #9aa3c7;
+      --accent: #7aa2ff;
+      --accent-2: #4bd1c5;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(800px 600px at 20% 20%, #121736, var(--bg));
+      color: var(--text);
+      display: grid; place-items: center; padding: 16px;
+    }
+
+    .app {
+      width: min(100%, 1100px);
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 900px){
+      .app { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+
+    .pad { padding: 14px 16px; }
+
+    h1 {
+      margin: 0 0 4px 0; font-weight: 700; letter-spacing: 0.2px; font-size: clamp(18px, 2.5vw, 24px);
+    }
+    p { color: var(--muted); margin: 4px 0 10px; }
+
+    .controls {
+      display: grid; gap: 14px; align-content: start;
+    }
+
+    .row { display: grid; grid-template-columns: 120px 1fr auto; gap: 10px; align-items: center; }
+    .row label { color: var(--muted); }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .btnbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      background: linear-gradient(180deg, var(--accent), #5a7ef7);
+      color: white; border: none; padding: 10px 14px; border-radius: 12px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 6px 18px rgba(90,126,247,0.35);
+    }
+    button.secondary { background: linear-gradient(180deg, #2a325e, #1a213f); box-shadow: none; color: #d9e0ff; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .readout {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;
+    }
+    .metric {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px;
+    }
+    .metric h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .metric .val { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+
+    canvas { display: block; width: 100%; height: auto; background: radial-gradient(800px 500px at 50% 50%, rgba(95,157,255,0.06), rgba(0,0,0,0)); }
+
+    .legend {
+      font-size: 13px; color: var(--muted);
+      border-top: 1px dashed rgba(255,255,255,0.15);
+      margin-top: 12px; padding-top: 12px;
+    }
+    .legend code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 8px; color: #e9edff; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <canvas id="scene" width="900" height="600"></canvas>
+    </div>
+
+    <div class="card pad">
+      <h1>Star Contraction ▶ Faster Spin</h1>
+      <p>Adjust radius or period to explore angular momentum conservation: <strong>L = I·ω</strong>. For a solid sphere, <strong>I = (2/5)·M·R²</strong>. With constant M, <strong>ω ∝ 1/R²</strong>.</p>
+
+      <div class="controls">
+        <div class="row">
+          <label for="radius">Radius R</label>
+          <input id="radius" type="range" min="30" max="160" step="1" />
+          <div id="rOut">—</div>
+        </div>
+        <div class="row">
+          <label for="period">Period (s)</label>
+          <input id="period" type="range" min="0.5" max="10" step="0.1" />
+          <div id="periodInput">—</div>
+        </div>
+
+        <div class="btnbar">
+          <button id="collapseBtn">Auto‑collapse</button>
+          <button class="secondary" id="resetBtn">Reset</button>
+          <button class="secondary" id="pauseBtn">Pause</button>
+        </div>
+
+        <div class="readout">
+          <div class="metric">
+            <h3>Angular speed, ω</h3>
+            <div class="val" id="omegaOut">— rad/s</div>
+          </div>
+          <div class="metric">
+            <h3>Angular momentum, L</h3>
+            <div class="val" id="Lout">—</div>
+          </div>
+          <div class="metric">
+            <h3>Radius ratio, R/R₀</h3>
+            <div class="val" id="ratioOut">—</div>
+          </div>
+          <div class="metric">
+            <h3>Rotation period</h3>
+            <div class="val" id="periodOut">— s</div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div>Drag <em>Radius</em> or <em>Period</em> to see how ω and L respond to angular momentum conservation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const k = 2/5;
+    const M = 1;
+
+    const canvas = document.getElementById('scene');
+    const ctx = canvas.getContext('2d');
+    const Rslider = document.getElementById('radius');
+    const periodSlider = document.getElementById('period');
+
+    const rOut = document.getElementById('rOut');
+    const omegaOut = document.getElementById('omegaOut');
+    const Lout = document.getElementById('Lout');
+    const ratioOut = document.getElementById('ratioOut');
+    const periodOut = document.getElementById('periodOut');
+    const periodInput = document.getElementById('periodInput');
+
+    const collapseBtn = document.getElementById('collapseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    let R0 = 140;
+    let R = R0;
+    let period = 5;
+    let omega0 = 2 * Math.PI / period;
+    let L = k * M * R0 * R0 * omega0;
+
+    let theta = 0;
+    let last = performance.now();
+    let playing = true;
+    let autocollapse = false;
+
+    Rslider.value = R;
+    periodSlider.value = period;
+
+    function omegaFromR(R){
+      return L / (k * M * R * R);
+    }
+
+    function updateReadout(){
+      const w = omegaFromR(R);
+      omegaOut.textContent = w.toFixed(3) + ' rad/s';
+      Lout.textContent = L.toFixed(3);
+      ratioOut.textContent = (R / R0).toFixed(3);
+      const periodVal = (2 * Math.PI) / Math.max(0.0001, w);
+      periodOut.textContent = periodVal.toFixed(2) + ' s';
+      periodInput.textContent = period.toFixed(1) + ' s';
+      rOut.textContent = Math.round(R) + ' px';
+    }
+
+    function drawStar(){
+      const { width, height } = canvas;
+      ctx.clearRect(0, 0, width, height);
+      const cx = width * 0.5;
+      const cy = height * 0.52;
+      const grad = ctx.createRadialGradient(cx, cy, R*0.2, cx, cy, R);
+      grad.addColorStop(0, '#fff9c4');
+      grad.addColorStop(1, '#dc5c2a');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI*2);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(theta);
+      const n = 10;
+      for (let i=0;i<n;i++){
+        const a = (i / n) * Math.PI * 2;
+        const x = R * 0.8 * Math.cos(a);
+        const y = R * 0.8 * Math.sin(a);
+        ctx.fillStyle = 'rgba(100,50,20,0.8)';
+        ctx.beginPath();
+        ctx.arc(x, y, R*0.05, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function step(now){
+      const dt = (now - last) / 1000;
+      last = now;
+      if (playing){
+        if (autocollapse){
+          R -= 40 * dt;
+          if (R < 40) {R = 40; autocollapse = false;}
+          Rslider.value = R;
+        }
+        const w = omegaFromR(R);
+        theta += w * dt;
+      }
+      drawStar();
+      updateReadout();
+      requestAnimationFrame(step);
+    }
+
+    Rslider.addEventListener('input', (e)=>{ R = parseFloat(e.target.value); updateReadout(); });
+    periodSlider.addEventListener('input', (e)=>{
+      period = parseFloat(e.target.value);
+      omega0 = 2 * Math.PI / period;
+      L = k * M * R0 * R0 * omega0;
+      updateReadout();
+    });
+
+    collapseBtn.addEventListener('click', ()=>{ autocollapse = true; playing = true; });
+    resetBtn.addEventListener('click', ()=>{
+      R = R0; period = 5; omega0 = 2 * Math.PI / period; L = k * M * R0 * R0 * omega0; theta = 0; autocollapse = false; playing = true; updateReadout();
+    });
+    pauseBtn.addEventListener('click', ()=>{ playing = !playing; pauseBtn.textContent = playing ? 'Pause' : 'Resume'; });
+
+    updateReadout();
+    requestAnimationFrame((t)=>{ last = t; step(t); });
+  </script>
+</body>
+</html>
