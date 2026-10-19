@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Polarizing an atom</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef3f9;color:#182c45;font:16px system-ui,sans-serif}main{max-width:1150px;margin:auto;padding:25px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{font-size:30px;margin:0 0 7px}p{line-height:1.5;margin:5px 0}.sub{color:#5c7087}.tag{background:#dce9f8;border-radius:30px;padding:8px 14px;font-size:13px;white-space:nowrap}.layout{display:grid;grid-template-columns:1fr 310px;gap:18px;margin-top:22px}.panel{background:white;border:1px solid #dce5f0;border-radius:18px;overflow:hidden;box-shadow:0 5px 22px #20395608}.scene{position:relative}canvas{display:block;width:100%;height:410px}.legend{display:flex;justify-content:center;gap:23px;padding:0 12px 18px;font-size:14px;color:#516780}.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px}.controls{padding:23px}h2{font-size:18px;margin:0 0 20px}label{display:flex;justify-content:space-between;gap:5px;font-weight:600;font-size:14px}input[type=range]{width:100%;margin:19px 0 7px;accent-color:#2465db}small{color:#687c93;font-size:12px}.buttons{display:flex;gap:7px;margin:13px 0 25px}button{border:1px solid #cfdbeb;background:#f4f7fc;border-radius:9px;padding:9px 12px;color:#24466e;cursor:pointer;font:inherit;font-size:13px}button:hover{background:#e2edff}button.primary{background:#2465db;color:white;border-color:#2465db}.check{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:15px}.check label{font-size:13px;font-weight:400}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:17px}.metric{background:white;border:1px solid #dce5f0;border-radius:13px;padding:16px}.metric span{display:block;font-size:12px;color:#657b93}.metric strong{display:block;font-size:23px;margin:7px 0 3px}.explain{padding:21px;margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:25px}.equation{font-size:19px;color:#245ca4;margin:10px 0}.caption{font-size:13px;color:#63788e}.question{background:#eaf2ff;border-radius:10px;padding:12px;font-size:14px;margin-top:15px}#status{font-size:13px;color:#536b86;min-height:42px;margin-top:15px}@media(max-width:800px){.layout{grid-template-columns:1fr}.controls{padding:20px}.explain{grid-template-columns:1fr}header{display:block}.tag{display:inline-block;margin-top:10px}main{padding:15px}.metric strong{font-size:19px}canvas{height:350px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>Polarizing an atom</h1><p class="sub">Turn on a uniform field. Watch the positive and negative charge centers separate.</p></div><span class="tag">Classical sphere model</span></header>
+<div class="layout">
+<section class="panel scene">
+<canvas id="atom" aria-label="Electron cloud and displaced proton in a uniform electric field"></canvas>
+<div class="legend"><span><i class="dot" style="background:#80aaf1"></i>Electron cloud (−e)</span><span><i class="dot" style="background:#ef6353"></i>Proton (+e)</span></div>
+</section>
+<section class="panel controls">
+<h2>Explore the atom</h2>
+<label for="field">External field E <span id="ev"></span></label>
+<input id="field" type="range" min="-3" max="3" step=".05" value="0">
+<small>Units: 10¹⁰ V/m · negative means left</small>
+<div class="buttons"><button id="reverse">Reverse E</button><button id="zero">Field off</button></div>
+<label for="radius">Cloud radius R <span id="rv"></span></label>
+<input id="radius" type="range" min=".5" max="1.5" step=".01" value="1">
+<small>Uniform sphere with total charge −e</small>
+<div class="buttons"><button id="smaller">Smaller</button><button id="larger">Larger</button></div>
+<button class="primary" id="demo">▶ Sweep the field</button>
+<button id="reset">Reset</button>
+<div class="check"><input type="checkbox" id="forces" checked><label for="forces">Show forces on the proton</label></div>
+<div class="check"><input type="checkbox" id="guides" checked><label for="guides">Show radius and separation</label></div>
+<div id="status"></div>
+</section>
+</div>
+<div class="metrics">
+<div class="metric"><span>CHARGE SEPARATION |d|</span><strong id="dv"></strong><span>Distance between charge centers</span></div>
+<div class="metric"><span>INDUCED DIPOLE p = ed</span><strong id="pv"></strong><span id="direction"></span></div>
+<div class="metric"><span>POLARIZABILITY α / α₀</span><strong id="av"></strong><span>α₀ corresponds to R = 1 Å</span></div>
+</div>
+<section class="panel explain">
+<div><h2 style="margin-bottom:10px">Why does the proton move?</h2><p>The external field pushes the proton along <b>E</b>. The negative cloud attracts it back toward the cloud’s center.</p><div class="equation">eE = e²d / (4πε₀R³)</div><p class="caption">At equilibrium, the two forces balance. The cloud stays fixed as our reference; d is the relative separation.</p></div>
+<div><h2 style="margin-bottom:10px">A bigger cloud is easier to polarize</h2><div class="equation">d = 4πε₀R³E / e<br>p = αE, &nbsp; α = 4πε₀R³</div><p class="caption">Idealized electrostatic model, not an electron orbit or a quantum calculation. All available settings keep the proton inside the cloud. Motion is a visual transition between equilibria.</p><div class="question"><b>Try it:</b> Set E = 1. Increase R from 0.5 Å to 1 Å. Why does the separation increase by a factor of eight?</div></div>
+</section>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),canvas=$('atom'),ctx=canvas.getContext('2d');
+const f=$('field'),r=$('radius');
+let d=0,last=0,playing=false,phase=0;
+const K=14.39964548; // k_e e / Å², expressed in units of 10^10 V/m
+function arrow(x,y,dx,dy,color,width=3){
+ const len=Math.hypot(dx,dy);if(len<1)return;
+ ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=width;
+ ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+dx,y+dy);ctx.stroke();
+ const a=Math.atan2(dy,dx),h=Math.min(10,len*.45);
+ ctx.beginPath();ctx.moveTo(x+dx,y+dy);
+ ctx.lineTo(x+dx-h*Math.cos(a-.45),y+dy-h*Math.sin(a-.45));
+ ctx.lineTo(x+dx-h*Math.cos(a+.45),y+dy-h*Math.sin(a+.45));ctx.closePath();ctx.fill();
+}
+function txt(t,x,y,c='#46627e',size=14,align='center'){
+ ctx.fillStyle=c;ctx.font=`${size}px system-ui`;ctx.textAlign=align;ctx.fillText(t,x,y);
+}
+function stop(){playing=false;$('demo').textContent='▶ Sweep the field'}
+function update(){
+ const E=+f.value,R=+r.value,target=E*R**3/K;
+ $('ev').textContent=E.toFixed(2);
+ $('rv').textContent=R.toFixed(2)+' Å';
+ $('dv').textContent=Math.abs(target).toFixed(3)+' Å';
+ $('pv').textContent=(Math.abs(target)*4.8032047).toFixed(3)+' D';
+ $('direction').textContent=E===0?'No induced dipole':E>0?'Dipole points right →':'← Dipole points left';
+ $('av').textContent=R**3<1?(R**3).toFixed(3)+' ×':(R**3).toFixed(2)+' ×';
+ $('status').textContent=E===0?'No field: the two charge centers coincide.':'The proton shifts '+(E>0?'right':'left')+'. The dipole points from negative to positive charge.';
+ return target;
+}
+f.oninput=()=>{stop();update()};r.oninput=()=>update();
+$('reverse').onclick=()=>{stop();f.value=-f.value;update()};
+$('zero').onclick=()=>{stop();f.value=0;update()};
+$('smaller').onclick=()=>{r.value=Math.max(.5,+r.value-.1);update()};
+$('larger').onclick=()=>{r.value=Math.min(1.5,+r.value+.1);update()};
+$('reset').onclick=()=>{stop();f.value=0;r.value=1;update()};
+$('demo').onclick=()=>{playing=!playing;phase=Math.asin(+f.value/3);$('demo').textContent=playing?'❚❚ Pause sweep':'▶ Sweep the field'};
+function draw(t){
+ const dt=Math.min((t-last)/1000,.05)||.016;last=t;
+ if(playing){phase+=dt*.55;f.value=(3*Math.sin(phase)).toFixed(2)}
+ const E=+f.value,R=+r.value,target=update();
+ d+=(target-d)*(1-Math.exp(-dt*8));
+ const box=canvas.getBoundingClientRect(),w=box.width,h=box.height,dpr=window.devicePixelRatio||1;
+ if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const cx=w*.5,cy=h*.51,scale=Math.min(w/5.4,h/4.3),rad=R*scale,px=cx+d*scale;
+ // Parallel arrows represent the external field only.
+ if(Math.abs(E)>.01){
+ ctx.globalAlpha=.18+.18*Math.abs(E)/3;
+ for(let y=58;y<h-18;y+=56)for(let x=20;x<w-25;x+=100)
+ arrow(E>0?x:x+65,y,(E>0?1:-1)*65,0,'#608ab4',1.5);
+ ctx.globalAlpha=1;
+ txt('Uniform external field',w/2,26,'#446889',14);
+ arrow(w/2-50*Math.sign(E),45,100*Math.sign(E),0,'#426d9b',3);
+ }else txt('External field off',w/2,32,'#627b94',15);
+ const grad=ctx.createRadialGradient(cx-rad*.25,cy-rad*.3,0,cx,cy,rad);
+ grad.addColorStop(0,'rgba(122,170,246,.22)');grad.addColorStop(1,'rgba(83,143,236,.40)');
+ ctx.fillStyle=grad;ctx.strokeStyle='#6495dd';ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(cx,cy,rad,0,Math.PI*2);ctx.fill();ctx.stroke();
+ // Minus signs distributed across a projected sphere, not orbiting particles.
+ ctx.fillStyle='#477cc4';ctx.font='19px system-ui';ctx.textAlign='center';
+ for(let row=-2;row<=2;row++)for(let col=-2;col<=2;col++){
+ const xx=col*.31,yy=row*.31;
+ if(xx*xx+yy*yy<.64 && Math.hypot(cx+xx*rad-px,yy*rad)>23)
+ ctx.fillText('−',cx+xx*rad,cy+yy*rad+6);
+ }
+ ctx.strokeStyle='#48658c';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(cx-5,cy);ctx.lineTo(cx+5,cy);ctx.moveTo(cx,cy-5);ctx.lineTo(cx,cy+5);ctx.stroke();
+ if($('guides').checked){
+ const yy=cy+rad+22;
+ ctx.setLineDash([3,4]);ctx.strokeStyle='#7087a1';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,yy+6);ctx.moveTo(px,cy);ctx.lineTo(px,yy+6);ctx.stroke();ctx.setLineDash([]);
+ if(Math.abs(d)*scale>3){ctx.strokeStyle='#425d7b';ctx.beginPath();ctx.moveTo(cx,yy);ctx.lineTo(px,yy);ctx.stroke();txt('d', (cx+px)/2,yy+19,'#304f74',16)}
+ const a=-2.4;arrow(cx,cy,rad*Math.cos(a),rad*Math.sin(a),'#526f9f',1.5);
+ txt('R',cx+rad*.57*Math.cos(a)-9,cy+rad*.57*Math.sin(a),'#35598c',16);
+ }
+ ctx.shadowColor='#dc514955';ctx.shadowBlur=13;ctx.fillStyle='#ef6353';
+ ctx.beginPath();ctx.arc(px,cy,12,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ txt('+',px,cy+6,'white',21);
+ if($('forces').checked&&Math.abs(E)>.03){
+ const sign=Math.sign(E),len=30+Math.abs(E)*19;
+ arrow(px,cy-29,sign*len,0,'#e69a22',3);
+ txt('F external',px+sign*len/2,cy-43,'#a76b0e',12);
+ // Restoring force uses the displayed displacement during the transition.
+ const restoringE=K*d/R**3,restLen=Math.abs(restoringE)>.03?30+Math.abs(restoringE)*19:0;
+ arrow(px,cy+29,-Math.sign(d)*restLen,0,'#875dcc',3);
+ if(restLen)txt('F restoring',px-Math.sign(d)*restLen/2,cy+52,'#774cac',12);
+ }
+ if(Math.abs(d)>.006){
+ const yy=Math.min(h-29,cy+rad+65);
+ arrow(cx,yy,d*scale,0,'#188d86',3);
+ txt('p = ed',cx+d*scale/2,yy-12,'#117d76',14);
+ }
+ requestAnimationFrame(draw);
+}
+update();requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
