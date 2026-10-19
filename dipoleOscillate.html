@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dipole in a Uniform Electric Field</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef3fa;color:#18324e;font:16px system-ui,sans-serif}
+main{max-width:1150px;margin:auto;padding:24px}
+h1{margin:0 0 7px;font-size:29px}
+.subtitle{color:#62788e;margin:0 0 22px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 305px;gap:18px}
+.panel{background:#fff;border:1px solid #dce5ef;border-radius:17px;overflow:hidden}
+canvas{display:block;width:100%;height:435px}
+.controls{padding:22px}
+h2{font-size:18px;margin:0 0 19px}
+label{display:flex;justify-content:space-between;font-size:14px;font-weight:600}
+input[type=range]{width:100%;accent-color:#2867da;margin:15px 0 7px}
+small{display:block;color:#6a8095;font-size:12px;line-height:1.5}
+.group{margin-bottom:22px}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;font-size:14px;border:1px solid #ccd9e9;border-radius:9px;padding:10px 13px;background:#f3f7fc;color:#244c7a;cursor:pointer}
+button:hover{background:#e4edfc}
+.primary{background:#2867da;color:white;border-color:#2867da}
+.check{display:flex;align-items:center;gap:8px;margin:12px 0}
+.check label{font-weight:400}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin:17px 0}
+.metric{background:white;padding:17px;border-radius:13px;border:1px solid #dce5ef}
+.metric small{font-size:12px}
+.metric strong{display:block;font-size:24px;margin-top:7px}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.info{padding:20px}
+.info h2{margin-bottom:10px}
+.info p{font-size:14px;line-height:1.6;margin:8px 0}
+.equation{color:#255ba0;font-size:20px;margin:12px 0}
+.legend{display:flex;gap:19px;justify-content:center;padding:0 10px 17px;font-size:13px;flex-wrap:wrap;color:#5e748c}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+#history{height:165px}
+#status{font-size:13px;line-height:1.6;color:#59738d;margin-top:15px}
+.note{background:#eaf2ff;padding:11px;border-radius:9px;font-size:13px;line-height:1.5;margin-top:12px}
+@media(max-width:800px){main{padding:14px}.grid,.bottom{grid-template-columns:1fr}canvas{height:360px}.metric{padding:12px}.metric strong{font-size:20px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<main>
+<h1>A dipole in an electric field</h1>
+<p class="subtitle">Equal and opposite forces produce a torque. Release the dipole and watch it rotate.</p>
+<div class="grid">
+<section class="panel">
+<canvas id="scene" aria-label="Rotating electric dipole in a horizontal uniform electric field"></canvas>
+<div class="legend">
+<span><i class="swatch" style="background:#ee6655"></i>Positive charge</span>
+<span><i class="swatch" style="background:#467cdb"></i>Negative charge</span>
+<span><i class="swatch" style="background:#e79b27"></i>Electric force</span>
+<span><i class="swatch" style="background:#16968a"></i>Dipole moment p</span>
+</div>
+</section>
+<section class="panel controls">
+<h2>Experiment controls</h2>
+<div class="group">
+<label for="field">Field E <span id="fieldValue"></span></label>
+<input id="field" type="range" min="-2" max="2" value="1" step=".05">
+<small>Relative units · positive points right</small>
+<div class="buttons"><button id="reverse">Reverse field</button><button id="off">Field off</button></div>
+</div>
+<div class="group">
+<label for="angle">Set dipole angle <span id="angleValue"></span></label>
+<input id="angle" type="range" min="-180" max="180" value="65" step="1">
+<small>Measured from the rightward horizontal. Changing this pauses and releases the dipole from rest.</small>
+</div>
+<div class="check"><input id="damping" type="checkbox"><label for="damping">Damping: let it settle</label></div>
+<div class="check"><input id="forces" type="checkbox" checked><label for="forces">Show electric forces</label></div>
+<div class="buttons"><button class="primary" id="play">▶ Release / oscillate</button><button id="reset">Reset</button></div>
+<div class="buttons"><button id="small">Small oscillation</button><button id="large">Large oscillation</button></div>
+<div id="status"></div>
+<div class="note"><b>Try:</b> Release at 65° with damping off. Then turn damping on. Where does the lost mechanical energy go?</div>
+</section>
+</div>
+<div class="metrics">
+<div class="metric"><small>ANGLE TO THE FIELD</small><strong id="theta"></strong></div>
+<div class="metric"><small>ELECTRIC TORQUE τ / (pE₀)</small><strong id="torque"></strong></div>
+<div class="metric"><small>POTENTIAL ENERGY U / (pE₀)</small><strong id="energy"></strong></div>
+</div>
+<div class="bottom">
+<section class="panel info">
+<h2>The physics</h2>
+<div class="equation">τ = p × E &nbsp; · &nbsp; U = −p · E</div>
+<p>The dipole moment <b>p</b> points from −q to +q. The uniform field gives zero net force, but generally a nonzero torque about the center.</p>
+<p><b>Stable:</b> p aligned with E. <b>Unstable:</b> p opposite E. At exactly opposite alignment, the torque is zero; a small disturbance starts rotation.</p>
+<small>Rigid permanent dipole with fixed center and fixed p. Time and field strength use illustrative units.</small>
+</section>
+<section class="panel info">
+<h2>Angle versus time</h2>
+<canvas id="history" aria-label="Graph of dipole orientation versus simulation time"></canvas>
+<small>Orientation from the rightward horizontal, wrapped to ±180°. Jumps at ±180° represent continuous rotation.</small>
+</section>
+</div>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const scene=$('scene'),ctx=scene.getContext('2d');
+const graph=$('history'),gc=graph.getContext('2d');
+let theta=65*Math.PI/180,omega=0,running=false,time=0,last=0,samples=[],sampleTime=-1;
+const stiffness=3.2;
+const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+function size(canvas,context){
+ const b=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+ const width=Math.round(b.width*dpr),height=Math.round(b.height*dpr);
+ if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height}
+ context.setTransform(dpr,0,0,dpr,0,0);
+ return [b.width,b.height];
+}
+function arrow(c,x,y,dx,dy,color,width=3){
+ const length=Math.hypot(dx,dy);if(length<1)return;
+ const a=Math.atan2(dy,dx),head=Math.min(10,length*.4);
+ c.strokeStyle=color;c.fillStyle=color;c.lineWidth=width;
+ c.beginPath();c.moveTo(x,y);c.lineTo(x+dx,y+dy);c.stroke();
+ c.beginPath();c.moveTo(x+dx,y+dy);
+ c.lineTo(x+dx-head*Math.cos(a-.42),y+dy-head*Math.sin(a-.42));
+ c.lineTo(x+dx-head*Math.cos(a+.42),y+dy-head*Math.sin(a+.42));c.closePath();c.fill();
+}
+function text(c,s,x,y,color='#54708b',font=14,align='center'){
+ c.fillStyle=color;c.font=`${font}px system-ui`;c.textAlign=align;c.fillText(s,x,y);
+}
+function button(){ $('play').textContent=running?'❚❚ Pause':'▶ Release / oscillate' }
+function setAngle(deg){
+ theta=deg*Math.PI/180;omega=0;running=false;time=0;samples=[];sampleTime=-1;
+ $('angle').value=deg;button();
+}
+$('angle').oninput=()=>setAngle(+$('angle').value);
+$('play').onclick=()=>{running=!running;button()};
+$('reverse').onclick=()=>{$('field').value=-$('field').value};
+$('off').onclick=()=>{$('field').value=0};
+$('reset').onclick=()=>{$('field').value=1;$('damping').checked=false;setAngle(65)};
+$('small').onclick=()=>{setAngle(15);$('field').value=1;running=true;button()};
+$('large').onclick=()=>{setAngle(140);$('field').value=1;running=true;button()};
+// Fixed-step RK4 integrates theta'' = -k E sin(theta) - gamma theta'.
+// Fixed timestep keeps results independent of screen refresh rate.
+let accumulator=0;const step=1/240;
+function integrate(h){
+ const E=+$('field').value,gamma=$('damping').checked?1.1:0;
+ const a=(q,v)=>-stiffness*E*Math.sin(q)-gamma*v;
+ const q1=omega,v1=a(theta,omega);
+ const q2=omega+h*v1/2,v2=a(theta+h*q1/2,omega+h*v1/2);
+ const q3=omega+h*v2/2,v3=a(theta+h*q2/2,omega+h*v2/2);
+ const q4=omega+h*v3,v4=a(theta+h*q3,omega+h*v3);
+ theta+=h*(q1+2*q2+2*q3+q4)/6;
+ omega+=h*(v1+2*v2+2*v3+v4)/6;
+ time+=h;
+}
+function drawGraph(){
+ const [w,h]=size(graph,gc);gc.clearRect(0,0,w,h);
+ const l=40,right=w-12,top=13,bottom=h-27;
+ for(const deg of [-180,-90,0,90,180]){
+ const y=top+(180-deg)/360*(bottom-top);
+ gc.strokeStyle=deg===0?'#becddd':'#e8eef5';gc.lineWidth=1;
+ gc.beginPath();gc.moveTo(l,y);gc.lineTo(right,y);gc.stroke();
+ text(gc,deg+'°',l-7,y+4,'#73879b',10,'right');
+ }
+ const start=Math.max(0,time-12),end=start+12;
+ text(gc,start.toFixed(0)+' s',l,h-8,'#73879b',10);
+ text(gc,end.toFixed(0)+' s',right,h-8,'#73879b',10);
+ gc.strokeStyle='#2867da';gc.lineWidth=2;gc.beginPath();
+ let previous=null;
+ for(const s of samples){
+ if(s.t<start)continue;
+ const x=l+(s.t-start)/12*(right-l),y=top+(180-s.a)/360*(bottom-top);
+ if(previous===null||Math.abs(previous-s.a)>180)gc.moveTo(x,y);else gc.lineTo(x,y);
+ previous=s.a;
+ }
+ gc.stroke();
+}
+function render(stamp){
+ const dt=last?Math.min((stamp-last)/1000,.05):0;last=stamp;
+ if(running){
+ accumulator+=dt;
+ while(accumulator>=step){integrate(step);accumulator-=step}
+ }else accumulator=0;
+ if(time-sampleTime>=.035||samples.length===0){
+ samples.push({t:time,a:wrap(theta)*180/Math.PI});sampleTime=time;
+ while(samples.length&&samples[0].t<time-13)samples.shift();
+ }
+ const E=+$('field').value,a=wrap(theta),deg=a*180/Math.PI;
+ $('angleValue').textContent=deg.toFixed(1)+'°';
+ if(running)$('angle').value=deg;
+ $('fieldValue').textContent=E.toFixed(2);
+ $('theta').textContent=Math.abs(E)<.001?'—':(Math.acos(Math.max(-1,Math.min(1,Math.cos(theta)*Math.sign(E))))*180/Math.PI).toFixed(1)+'°';
+ $('torque').textContent=(-E*Math.sin(theta)).toFixed(3);
+ $('energy').textContent=(-E*Math.cos(theta)).toFixed(3);
+ $('status').textContent=!running?'Paused. Choose an angle, then release.':Math.abs(E)<.001?'Field off: no electric torque. '+($('damping').checked?'Damping slows the rotation.':'Existing rotation continues at constant speed.'):$('damping').checked?'Damping removes mechanical energy; the dipole settles toward alignment.':'No damping: mechanical energy is conserved while the field stays fixed.';
+ const [w,h]=size(scene,ctx);ctx.clearRect(0,0,w,h);
+ const cx=w/2,cy=h/2+8,L=Math.min(100,w*.22);
+ if(Math.abs(E)>.001){
+ ctx.globalAlpha=.20+.13*Math.abs(E);
+ for(let y=70;y<h-20;y+=56)for(let x=18;x<w-35;x+=95)
+ arrow(ctx,E>0?x:x+62,y,Math.sign(E)*62,0,'#6c91b4',1.5);
+ ctx.globalAlpha=1;
+ text(ctx,'Uniform external electric field',w/2,27,'#456a91',14);
+ arrow(ctx,w/2-48*Math.sign(E),47,96*Math.sign(E),0,'#456a91',3);
+ }else text(ctx,'External field off',w/2,32,'#607890',15);
+ // Angle arc: mathematical counterclockwise angles, with canvas y inverted.
+ ctx.strokeStyle='#99aec6';ctx.lineWidth=1;
+ ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+L+32,cy);ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle='#8b9fba';ctx.beginPath();ctx.arc(cx,cy,38,0,-a,a>0);ctx.stroke();
+ text(ctx,'θ',cx+53*Math.cos(a/2),cy-53*Math.sin(a/2)+5,'#6c809c',16);
+ const ux=Math.cos(theta),uy=-Math.sin(theta);
+ const xp=cx+L*ux,yp=cy+L*uy,xm=cx-L*ux,ym=cy-L*uy;
+ ctx.strokeStyle='#64758d';ctx.lineWidth=7;ctx.lineCap='round';
+ ctx.beginPath();ctx.moveTo(xm,ym);ctx.lineTo(xp,yp);ctx.stroke();ctx.lineCap='butt';
+ // p arrow parallel to the rod, displaced to avoid overlap.
+ const nx=-uy,ny=ux,offset=-27;
+ arrow(ctx,cx-L*.58*ux+offset*nx,cy-L*.58*uy+offset*ny,L*1.16*ux,L*1.16*uy,'#159488',4);
+ text(ctx,'p',cx+offset*nx*1.7,cy+offset*ny*1.7+5,'#10847a',20);
+ if($('forces').checked&&Math.abs(E)>.001){
+ const len=32*Math.abs(E);
+ arrow(ctx,xp,yp,Math.sign(E)*len,0,'#e59b24',4);
+ arrow(ctx,xm,ym,-Math.sign(E)*len,0,'#e59b24',4);
+ text(ctx,'+qE',xp+Math.sign(E)*(len+22),yp-14,'#af7619',13);
+ text(ctx,'−qE',xm-Math.sign(E)*(len+22),ym+26,'#af7619',13);
+ }
+ for(const [x,y,color,symbol] of [[xp,yp,'#ee6655','+'],[xm,ym,'#467cdb','−']]){
+ ctx.shadowColor=color+'55';ctx.shadowBlur=12;ctx.fillStyle=color;
+ ctx.beginPath();ctx.arc(x,y,17,0,2*Math.PI);ctx.fill();ctx.shadowBlur=0;
+ text(ctx,symbol,x,y+7,'white',24);
+ }
+ ctx.fillStyle='#40546c';ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();
+ text(ctx,'Fixed center • zero net electric force',w/2,h-16,'#637b94',12);
+ drawGraph();requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
